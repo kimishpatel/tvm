@@ -10,12 +10,15 @@
 
 #include <vector>
 
+#include "managed_tensors.h"
+
 struct TVMObject {
   tvm::PackedFunc kernel;
   tvm::PackedFunc set_input;
   tvm::PackedFunc get_output;
   // Map input indices to values in the subgraph
   std::vector<torch::jit::Value*> input_values;
+  torch_tvm::ManagedParamTensors tvm_param_tensors_;
 };
 
 struct TVMCompiler {
@@ -47,5 +50,6 @@ struct TVMCompiler {
   static tvm::relay::Function convertToRelay(
       std::shared_ptr<torch::jit::Graph> subgraph,
       TVMContext ctx,
+      torch_tvm::ManagedParamTensors* tvm_param_tensors_ptr = nullptr,
       std::vector<torch::jit::Value*>* input_values = nullptr);
 };
