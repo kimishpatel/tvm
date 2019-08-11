@@ -340,7 +340,8 @@ RegisterTVMOperator reg({
            tvm::relay::CallNode::make(op, ln_inputs, tvm::Attrs(attrs), {});
        TORCH_CHECK(node->outputs().size() == 1);
        return out;
-     }},
+     },
+     "", PARAM_INDICES(layer_norm)},
     {Symbol::fromQualString("aten::batch_norm"),
      [](Node* node, tvm::Array<tvm::relay::Expr> inputs) -> tvm::relay::Expr {
        auto op = tvm::relay::Op::Get("nn.batch_norm");
@@ -536,7 +537,8 @@ RegisterTVMOperator reg({
              bias_add_op, {out, inputs[2]}, tvm::Attrs(bias_add_attrs), {});
        }
        return out;
-     }},
+     },
+     "", PARAM_INDICES(linear)},
      {Symbol::fromQualString("aten::softmax"),
      [](Node* node, tvm::Array<tvm::relay::Expr> inputs) {
        auto softmax_op = tvm::relay::Op::Get("nn.softmax");

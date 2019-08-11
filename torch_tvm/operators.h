@@ -4,6 +4,8 @@
 #include <tvm/relay/op.h>
 
 #define PARAM_INDICES_convolution {1, 2}
+#define PARAM_INDICES_layer_norm {2, 3}
+#define PARAM_INDICES_linear {1, 2}
 
 #define PARAM_INDICES(op_name) PARAM_INDICES_##op_name
 
