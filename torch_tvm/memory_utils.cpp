@@ -1,3 +1,5 @@
+#include <tvm/runtime/device_api.h>
+
 #include "memory_utils.h"
 
 namespace torch_tvm {
@@ -5,7 +7,7 @@ namespace utils {
 
 bool is_aligned(void* data_ptr, std::uintptr_t alignment_in_bytes) {
   auto mask = alignment_in_bytes - 1;
-  AT_CHECK((alignment_in_bytes & mask) == 0);
+  TORCH_CHECK((alignment_in_bytes & mask) == 0);
   return (reinterpret_cast<std::uintptr_t>(data_ptr) & mask) == 0;
 }
 
@@ -26,7 +28,7 @@ DLManagedTensor* alloc_and_copy_data(const at::Tensor& tensor) {
   dl_tensor.data = nullptr;
   dl_tensor.shape = new int64_t[num_dims];
   dl_tensor.strides = new int64_t[num_dims];
-  AT_CHECK(dl_tensor.shape != nullptr && dl_tensor.strides != nullptr,
+  TORCH_CHECK(dl_tensor.shape != nullptr && dl_tensor.strides != nullptr,
       "Memory allocation failed for DLTensor shape and strides"
       "by ManagedTensors.");
 
@@ -36,9 +38,9 @@ DLManagedTensor* alloc_and_copy_data(const at::Tensor& tensor) {
     dl_tensor.shape[i] = tensor_sizes[i];
     dl_tensor.strides[i] = tensor_strides[i];
   }
-  dl_tensor.data = aligned_alloc(64,
+  dl_tensor.data = aligned_alloc(tvm::runtime::kAllocAlignment,
       tensor.nbytes());
-  AT_CHECK(dl_tensor.data != nullptr,
+  TORCH_CHECK(dl_tensor.data != nullptr,
       "Memory allocation failed for DLTensor data by ManagedTensors.");
 
   std::memcpy (dl_tensor.data, tensor.data_ptr(), tensor.nbytes());

@@ -23,8 +23,8 @@ std::unordered_map<Symbol, TVMOpFunctor>& getTVMOperatorMap() {
   return map;
 }
 
-std::unordered_map<Symbol, ParamIndicesType>& getOpParamsMap() {
-  static std::unordered_map<Symbol, ParamIndicesType> param_map;
+std::unordered_map<Symbol, std::vector<int32_t>>& getOpParamsMap() {
+  static std::unordered_map<Symbol, std::vector<int32_t>> param_map;
   return param_map;
 }
 

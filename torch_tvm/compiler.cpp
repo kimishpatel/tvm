@@ -1,11 +1,11 @@
 #include "compiler.h"
 #include "operators.h"
-#include "memory_utils.h"
 
 #include <ATen/DLConvertor.h>
 #include <torch/csrc/jit/constants.h>
 #include <torch/csrc/jit/interpreter.h>
 #include <limits>
+#include <tvm/runtime/device_api.h>
 
 using namespace torch::jit;
 
@@ -138,8 +138,7 @@ tvm::relay::Expr TVMCompiler::convertToRelay(
 tvm::relay::Function TVMCompiler::convertToRelay(
     std::shared_ptr<Graph> subgraph,
     TVMContext ctx,
-    torch_tvm::ManagedParamTensors* tvm_param_tensors_ptr,
-    std::vector<Value*>* input_values) {
+    std::vector<std::pair<Value*, bool>>* input_values) {
   std::unordered_map<Value*, tvm::relay::Expr> value_map;
   tvm::Array<tvm::relay::Var> input_vars;
 
@@ -148,7 +147,8 @@ tvm::relay::Function TVMCompiler::convertToRelay(
     auto v = convertToRelay(input, ctx);
     input_vars.push_back(v);
     if (input_values) {
-      input_values->emplace_back(input);
+      // Primary inputs are always mutable.
+      input_values->emplace_back(input, false);
     }
     value_map[input] = v;
   }
@@ -184,7 +184,7 @@ tvm::relay::Function TVMCompiler::convertToRelay(
             } else {
               if (optional_ivalue.value().isTensor()) {
                 if (input_values) {
-                  input_values->emplace_back(input);
+                  input_values->emplace_back(input, false);
                 }
                 auto input_var = convertToRelay(input, ctx);
                 input_vars.push_back(input_var);
@@ -194,11 +194,17 @@ tvm::relay::Function TVMCompiler::convertToRelay(
               }
             }
           }
-          if (!skip_user &&
-              tvm_param_tensors_ptr &&
+          // Annotate the value: Whether the Value corresponds to parameter
+          // and thus is expected to be immutable.
+          if (!skip_user && input_values &&
               std::find(param_indices.begin(),
-              param_indices.end(), input_index) != param_indices.end()) {
-            tvm_param_tensors_ptr->insert_value(input);
+                param_indices.end(), input_index) != param_indices.end()) {
+            auto it = std::find_if(input_values->begin(), input_values->end(),
+                [input](const std::pair<Value*, bool>& v)
+                {return v.first == input;});
+            TORCH_CHECK(it != input_values->end(), "Input at index:",
+                input_index, " should be in the list of input Value*");
+            (*it).second = true;
           }
           relay_inputs.push_back(value_map[input]);
           input_index++;
@@ -306,8 +312,7 @@ void TVMCompiler::run(Stack& stack) {
     // either throw or fall back to the JIT interpreter for execution
     tvm::relay::Function tvm_func;
     try {
-      tvm_func = convertToRelay(subgraph_, ctx_,
-          &cache_[spec].tvm_param_tensors_, &cache_[spec].input_values);
+      tvm_func = convertToRelay(subgraph_, ctx_, &cache_[spec].input_values);
     } catch (const std::exception& e) {
       if (strict_) {
         AT_ERROR(
@@ -344,27 +349,32 @@ void TVMCompiler::run(Stack& stack) {
   // Using vector of unique pointers with custom deleter to
   // delete allocated memory when gone out of scope.
   // Only for those inputs which are not parameters.
-  // Parameters are managed by cached tvm_param_tensors_.
+  // Parameters are managed by cached tvm_param_tensors.
   // They get deallocated when cache_ is deleted.
   std::vector<DLManagedTensorPtr> dl_tensor_list;
   for (auto i = 0; i < cache_[spec].input_values.size(); ++i) {
-    auto* value = cache_[spec].input_values[i];
+    auto* value = cache_[spec].input_values[i].first;
+    bool input_immutable = cache_[spec].input_values[i].second;
     if (!value_to_ivalue.count(value)) {
       auto optional_ivalue = toIValue(value);
       TORCH_INTERNAL_ASSERT(optional_ivalue.has_value());
       value_to_ivalue[value] = optional_ivalue.value();
     }
-    auto ivalue = value_to_ivalue.at(cache_[spec].input_values[i]);
+    auto ivalue = value_to_ivalue.at(cache_[spec].input_values[i].first);
     //auto tensor = ivalue.toTensor().to(at::kFloat);
     auto tensor = ivalue.toTensor();
     DLManagedTensor* dl_tensor;
     if (torch_tvm::utils::is_aligned(tensor.data_ptr(),
           tvm::runtime::kAllocAlignment)) {
       dl_tensor = at::toDLPack(tensor);
-    } else if (cache_[spec].tvm_param_tensors_.value_exists(value)) {
-      // Is the value parameter that is assumed to immutable?
-      dl_tensor = cache_[spec].tvm_param_tensors_.
-        get_tensor_like_for_value(value, tensor);
+    } else if (input_immutable) {
+      if (cache_[spec].tvm_param_tensors.find(value) ==
+        cache_[spec].tvm_param_tensors.end()) {
+        dl_tensor = torch_tvm::utils::alloc_and_copy_data(tensor);
+        cache_[spec].tvm_param_tensors[value] = DLManagedTensorPtr(dl_tensor);
+      } else {
+        dl_tensor = cache_[spec].tvm_param_tensors[value].get();
+      }
     } else {
       dl_tensor =
         torch_tvm::utils::alloc_and_copy_data(tensor);

@@ -10,15 +10,19 @@
 
 #include <vector>
 
-#include "managed_tensors.h"
+#include "memory_utils.h"
 
 struct TVMObject {
   tvm::PackedFunc kernel;
   tvm::PackedFunc set_input;
   tvm::PackedFunc get_output;
   // Map input indices to values in the subgraph
-  std::vector<torch::jit::Value*> input_values;
-  torch_tvm::ManagedParamTensors tvm_param_tensors_;
+  // Plus indicates if the corresponding value is immutable,
+  // e.g., a parameter such as weight.
+  std::vector<std::pair<torch::jit::Value*, bool>> input_values;
+  // DLManagedTensorPtr = unique_ptr<DLManagedTensor, DLManagedTensorDeleter>
+  std::unordered_map<torch::jit::Value*, torch_tvm::utils::DLManagedTensorPtr>
+    tvm_param_tensors;
 };
 
 struct TVMCompiler {
@@ -50,6 +54,5 @@ struct TVMCompiler {
   static tvm::relay::Function convertToRelay(
       std::shared_ptr<torch::jit::Graph> subgraph,
       TVMContext ctx,
-      torch_tvm::ManagedParamTensors* tvm_param_tensors_ptr = nullptr,
-      std::vector<torch::jit::Value*>* input_values = nullptr);
+      std::vector<std::pair<torch::jit::Value*, bool>>* input_values = nullptr);
 };

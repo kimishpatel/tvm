@@ -24,16 +24,14 @@ using TVMOpFunctor = std::function<tvm::relay::Expr(
     tvm::Array<tvm::relay::Expr> inputs)>;
 using TVMScheduleFunctor = std::function<const tvm::runtime::PackedFunc*()>;
 
-using ParamIndicesType = std::vector<int32_t>;
-
 struct TVMOpMap {
   TVMOpMap(torch::jit::Symbol sym_, TVMOpFunctor fn_, std::string name_ = ""
-      ,ParamIndicesType param_indices_={})
+      ,std::vector<int32_t> param_indices_={})
       : sym(sym_), fn(fn_), name(name_), param_indices(param_indices_){}
 
   torch::jit::Symbol sym;
   TVMOpFunctor fn;
-  ParamIndicesType param_indices;
+  std::vector<int32_t> param_indices;
   std::string name;
 };
 
