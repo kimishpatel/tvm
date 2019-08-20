@@ -364,7 +364,8 @@ void TVMCompiler::run(Stack& stack) {
     //auto tensor = ivalue.toTensor().to(at::kFloat);
     auto tensor = ivalue.toTensor();
     DLManagedTensor* dl_tensor;
-    if (torch_tvm::utils::is_aligned(tensor.data_ptr(),
+    if (tensor.is_contiguous() &&
+        torch_tvm::utils::is_aligned(tensor.data_ptr(),
           tvm::runtime::kAllocAlignment)) {
       dl_tensor = at::toDLPack(tensor);
     } else if (input_immutable) {
