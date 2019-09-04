@@ -55,7 +55,6 @@ def _get_sorted_factors(x):
 
 def _get_largest_factor_smaller_than(num, max_value, preferred, min_value):
     sorted_factors = _get_sorted_factors(num)
-    print(sorted_factors)
     max_f = None
     preferred_f = None
     min_f = None
@@ -91,7 +90,6 @@ def _custom_dense_pack_config(cfg, M, N, K):
 
     tiley_ii = _get_largest_factor_smaller_than(M, 12, 8, 4)
     tiley_outer = M // tiley_ii
-    print("Y sizes:", tiley_outer, tiley_ii)
     cfg["tile_y"] = SplitEntity([tiley_outer, 1, tiley_ii])
     cfg["tile_x"] = SplitEntity([NN // tilex_oi, tilex_oi, tilex_ii])
     cfg["tile_k"] = SplitEntity([K, 1])
