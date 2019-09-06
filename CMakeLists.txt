@@ -4,7 +4,7 @@ file(GLOB TORCH_TVM_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/torch_tvm/*.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/torch_tvm/custom_tvm_ops/cpp/relay/*.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/torch_tvm/custom_tvm_ops/cpp/topi/*.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/torch_tvm/custom_tvm_ops/topi/contrib/*.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/torch_tvm/custom_tvm_ops/cpp/topi/contrib/*.cc
 )
 
 set(CMAKE_CXX_STANDARD 11)
