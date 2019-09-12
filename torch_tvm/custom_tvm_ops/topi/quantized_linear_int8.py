@@ -10,11 +10,11 @@ from topi import tag
 
 @tvm.target.generic_func
 def quantized_mm_dequantize(data, weight, weight_acc, data_acc, data_scale, \
-        data_zero_point, weight_scale, weight_zero_point, N, out_dtype=None):
+        data_zero_point, weight_scale, weight_zero_point, out_dtype=None):
     quantized_mm_dequant_fn = \
             tvm.get_global_func("nn.compute_quantized_mm_dequantize")
     return quantized_mm_dequant_fn(data, weight, weight_acc, data_acc, data_scale, \
-            data_zero_point, weight_scale, weight_zero_point, N)[0]
+            data_zero_point, weight_scale, weight_zero_point)[0]
 
 
 # The reason to have to register_topi_compute at all is due to the fact that
@@ -26,12 +26,12 @@ def quantized_mm_dequantize(data, weight, weight_acc, data_acc, data_scale, \
 # autotvm machinary works.
 @autotvm.register_topi_compute(quantized_mm_dequantize, 'cpu', ['direct'])
 def _quantized_mm_dequantize_dummy(cfg, data, weight, weight_acc, data_acc, \
-        data_scale, data_zero_point, weight_scale, weight_zero_point, N, \
+        data_scale, data_zero_point, weight_scale, weight_zero_point, \
         out_dtype):
     quantized_mm_dequant_fn = \
             tvm.get_global_func("nn.compute_quantized_mm_dequantize")
     return quantized_mm_dequant_fn(data, weight, weight_acc, data_acc, data_scale, \
-            data_zero_point, weight_scale, weight_zero_point, N)[0]
+            data_zero_point, weight_scale, weight_zero_point)[0]
 
 
 @tvm.target.generic_func

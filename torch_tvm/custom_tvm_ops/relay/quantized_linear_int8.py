@@ -19,10 +19,9 @@ def compute_quantized_mm_dequantize(attrs, inputs, out_type, target):
     data_zero_point = inputs[5]
     weight_scale = attrs.w_scale
     weight_zero_point = attrs.w_zp
-    N = attrs.N
     out = quantized_linear_int8.quantized_mm_dequantize(data, weight, \
             weight_acc, data_acc, data_scale, data_zero_point, weight_scale, \
-            weight_zero_point, N, out_type.dtype)
+            weight_zero_point, out_type.dtype)
     return [out]
 
 

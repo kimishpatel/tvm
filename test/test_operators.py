@@ -333,17 +333,19 @@ class TestOperators(TVMTest):
         out_features=TVMTest.rand_int(15, 30),
     )
     def test_quantized_linear(self, shape, out_features):
-        input = torch.rand(shape)
-        weight = torch.rand(out_features, shape[1])
+        K = shape[1] * 4 # Make K multiple of 4.
+        out_features = out_features * 16 # Make N multiple of 16
+        input = torch.rand((shape[0], K))
+        weight = torch.rand(out_features, K)
         bias = torch.rand(out_features)
         q_weight, col_offsets, scale, zero_point = \
             torch.fbgemm_linear_quantize_weight(weight.clone().float())
         packed_weight = torch.fbgemm_pack_quantized_matrix(q_weight.clone())
 
-        def fbgemm_quantized_linear(input, weight, bias, col_offsets):
+        def fbgemm_quantized_linear(input, q_weight, bias, col_offsets):
             return torch.fbgemm_linear_int8_weight_fp32_activation(
-                input.float(), weight, packed_weight, col_offsets, scale, zero_point, bias.float())
-        ref_out, tvm_out = self.runBoth(fbgemm_quantized_linear, input, weight, bias, col_offsets)
+                input.float(), q_weight, packed_weight, col_offsets, scale, zero_point, bias.float()) + 2.0
+        ref_out, tvm_out = self.runBoth(fbgemm_quantized_linear, input, q_weight, bias, col_offsets)
         # relax the constraint to avoid flaky test
         assert torch.allclose(ref_out, tvm_out, rtol=0.5, atol=0.5)
 

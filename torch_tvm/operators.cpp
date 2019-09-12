@@ -132,13 +132,17 @@ tvm::relay::Expr lowerFbgemmLinearInt8Acc32FP32(tvm::Array<tvm::relay::Expr> inp
   const auto weight_type = getExprType(inputs[1]);
   auto weight_shape = weight_type.shape;
   int N = (weight_shape[0].as<tvm::IntImm>())->value;
+  int K = (weight_shape[0].as<tvm::IntImm>())->value;
+  TORCH_CHECK( (N % 16) == 0, "Expect the first dim of weight to be "
+      "multiple of 16 but got ", N);
+  TORCH_CHECK( (K % 4) == 0, "Expect the second dim of weight to be "
+      "multiple of 16 but got ", K);
 
   tvm::Array<tvm::relay::Expr> deq_inputs = {q_data, packed_weight, inputs[3], q_data_acc, data_scale, data_zp};
 
   auto params_attrs = tvm::make_node<tvm::relay::QuantizedParamsAttrs>();
   params_attrs->w_scale= static_cast<double>(relayToConstant<float>(inputs[4]));
   params_attrs->w_zp = relayToConstant<int>(inputs[5]);
-  params_attrs->N = N;
 
   auto mm = tvm::relay::CallNode::make(op_data_deq, deq_inputs, tvm::Attrs(params_attrs), {});
   auto bias_add_op = tvm::relay::Op::Get("nn.bias_add");

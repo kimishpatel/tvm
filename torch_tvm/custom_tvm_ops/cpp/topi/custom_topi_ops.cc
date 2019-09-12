@@ -178,10 +178,10 @@ TVM_REGISTER_GLOBAL("nn.custom_layer_norm")
 
 TVM_REGISTER_GLOBAL("nn.compute_quantized_mm_dequantize")
     .set_body([](TVMArgs args, TVMRetValue* rv) {
-      CHECK(args.size() == 9);
+      CHECK(args.size() == 8);
       *rv = data_int8_mm_dequantize(
         args[0], args[1], args[2], args[3],
-        args[4], args[5], args[6], args[7], args[8]);
+        args[4], args[5], args[6], args[7]);
     });
 
 } // namespace topi

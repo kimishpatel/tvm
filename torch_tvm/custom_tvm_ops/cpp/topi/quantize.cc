@@ -56,8 +56,7 @@ Array<Tensor> data_int8_mm_dequantize(
     const Tensor& data_scale,
     const Tensor& data_zero_point,
     const double weight_scale,
-    const int weight_zero_point,
-    const int32_t N) {
+    const int weight_zero_point) {
   // assume M, K and N, K on input shape
   CHECK(weight->shape.size() == 4);
   auto k = tvm::reduce_axis(Range(0, data->shape[1]), "k");
@@ -75,7 +74,7 @@ Array<Tensor> data_int8_mm_dequantize(
   auto zero_point_mul = weight_zero_point*data_zero_point(0)*(data->shape[1]);
 
   auto result = tvm::compute(
-        {data->shape[0], Expr(N)},
+        out_shape,
         [&](Var i, Var j) {
           return scale_mul*(tvm::cast(Float(32), (quantized_mm(i, j)-data_acc(i)*weight_zero_point-
                             weight_acc(j)*data_zero_point(0) + zero_point_mul)));

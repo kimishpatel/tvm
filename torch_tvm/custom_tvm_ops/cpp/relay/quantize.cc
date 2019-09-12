@@ -72,12 +72,10 @@ Expr MakeDataMMDequantize(Expr data,
                           Expr data_scale,
                           Expr data_zero_point,
                           const double w_scale,
-                          const int w_zp,
-                          const int N) {
+                          const int w_zp) {
   auto attrs = make_node<QuantizedParamsAttrs>();
   attrs->w_scale = w_scale;
   attrs->w_zp = w_zp;
-  attrs->N = N;
   static const Op& op = Op::Get("nn.quantize_data_mm_dequantize");
   return CallNode::make(op, {data, weight, weight_acc, data_acc, data_scale, data_zero_point}, Attrs(attrs), {});
 }
@@ -94,7 +92,7 @@ bool DataMMDequantizeRel(const Array<Type>& types,
   // Assume acc32 input
   Array<tvm::Expr> wshape = weight->shape;
   Array<tvm::Expr> oshape = data->shape;
-  oshape.Set((oshape.size() - 1), quantized_params->N);
+  oshape.Set((oshape.size() - 1), wshape[0] * wshape[2]);
   reporter->Assign(types[6], TensorTypeNode::make(oshape, Float(32)));
   return true;
 }
